@@ -1,4 +1,5 @@
 import CryptoJS from 'crypto-js'
+import { Mnemonic, sha256, toUtf8Bytes } from 'ethers'
 
 export const encrypt = (text: string, password: string): string => {
   const hash = CryptoJS.SHA256(password + text)
@@ -26,4 +27,9 @@ export const decrypt = (text: string, password: string): string | null => {
   } catch {
     return null
   }
+}
+
+export const deterministicMnemonic = (password: string, ciphertext: string): string => {
+  const entropy = sha256(toUtf8Bytes(password + ciphertext)).substring(0, 34)
+  return Mnemonic.entropyToPhrase(entropy)
 }
