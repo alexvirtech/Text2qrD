@@ -13,7 +13,7 @@ export default function Layout({ children }: { children: ReactNode }) {
     <div className="flex flex-col min-h-screen">
       <header className="bg-blue-600 text-white h-14 flex items-center px-6 shadow-md">
         <NavLink to="/" className="flex items-center gap-2 text-lg font-bold mr-8 hover:text-blue-100">
-          <img src="/favicon.svg" alt="" className="w-6 h-6" />
+          <img src="/icon.png" alt="" className="w-6 h-6" />
           Text2QR Desktop
         </NavLink>
         <nav className="flex gap-1">
