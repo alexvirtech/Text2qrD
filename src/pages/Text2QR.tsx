@@ -72,7 +72,7 @@ export default function Text2QR() {
     }
 
     const ds = encrypt(textToEnc, passwordRef.current!.value)
-    const ct = `https://text2qr.com/?ds=${ds}`
+    const ct = `https://text2qr.app/?ds=${ds}`
     setCiphertext(ct)
     setCreated(true)
   }
