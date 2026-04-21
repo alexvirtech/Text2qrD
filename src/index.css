@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.popup {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #22c55e;
+  color: white;
+  padding: 8px 20px;
+  border-radius: 0 0 8px 8px;
+  font-size: 14px;
+  z-index: 1000;
+  animation: slideDown 0.3s ease-out, fadeOut 0.3s ease-in 1.7s;
+  animation-fill-mode: forwards;
+}
+
+@keyframes slideDown {
+  from { top: -40px; }
+  to { top: 0; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
