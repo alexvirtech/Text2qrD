@@ -4,6 +4,9 @@ import { decrypt } from '../utils/crypto'
 import { styles } from '../utils/styles'
 import { copyText } from '../utils/lib'
 import Error from '../components/Error'
+import CameraScanner from '../components/CameraScanner'
+
+type Mode = 'choose' | 'file' | 'camera'
 
 export default function QR2Text() {
   const [created, setCreated] = useState(false)
@@ -11,16 +14,24 @@ export default function QR2Text() {
   const [password, setPassword] = useState('')
   const [fileName, setFileName] = useState('')
   const [fileData, setFileData] = useState<string | null>(null)
+  const [scannedData, setScannedData] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [mode, setMode] = useState<Mode>('choose')
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
 
+  const hasQrData = !!(fileName || scannedData)
+
   useEffect(() => {
-    if (!created && fileName) {
+    if (!created && hasQrData) {
       passwordRef.current?.focus()
     }
-  }, [fileName, created])
+  }, [hasQrData, created])
+
+  const extractEncryptedData = (raw: string): string => {
+    return raw.replace(/^https?:\/\/[^/]+\/\?ds=/, '')
+  }
 
   const handleFile = (file: File) => {
     const reader = new FileReader()
@@ -43,9 +54,31 @@ export default function QR2Text() {
     if (file) handleFile(file)
   }
 
+  const handleCameraScanned = (data: string) => {
+    setScannedData(data)
+    setError('')
+  }
+
   const handleDecrypt = () => {
-    if (!fileData || !password) {
-      setError('Please upload a file and enter a password.')
+    if (!password) {
+      setError('Please enter a password.')
+      return
+    }
+
+    if (scannedData) {
+      const data = extractEncryptedData(scannedData)
+      const decryptedText = decrypt(data, password)
+      if (decryptedText) {
+        setText(decryptedText)
+        setCreated(true)
+      } else {
+        setError('Decryption failed. Please check the password.')
+      }
+      return
+    }
+
+    if (!fileData) {
+      setError('Please upload a file or scan a QR code.')
       return
     }
 
@@ -62,7 +95,7 @@ export default function QR2Text() {
       const qrCode = jsQR(imageData.data, canvas.width, canvas.height)
 
       if (qrCode) {
-        const data = qrCode.data.replace(/^https?:\/\/[^/]+\/\?ds=/, '')
+        const data = extractEncryptedData(qrCode.data)
         const decryptedText = decrypt(data, password)
         if (decryptedText) {
           setText(decryptedText)
@@ -84,17 +117,42 @@ export default function QR2Text() {
     setPassword('')
     setFileName('')
     setFileData(null)
+    setScannedData(null)
     setCreated(false)
     setError('')
+    setMode('choose')
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   return (
     <div className="w-full max-w-[800px] mx-auto px-8">
       <div className="text-3xl pt-4">QR to Text</div>
-      <div className="text-gray-500">Upload a file containing the QR code</div>
+      <div className="text-gray-500">Upload a QR code image or scan with camera</div>
 
-      {!fileName && !created && (
+      {mode === 'choose' && !created && !hasQrData && (
+        <div className="flex justify-center gap-4 mt-6">
+          <button
+            type="button"
+            onClick={() => setMode('file')}
+            className="flex-1 max-w-[250px] border-2 border-dashed border-gray-400 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+          >
+            <div className="text-3xl mb-2">&#128193;</div>
+            <div className="font-bold text-gray-700">Upload File</div>
+            <div className="text-sm text-gray-500 mt-1">Select or drag a QR code image</div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('camera')}
+            className="flex-1 max-w-[250px] border-2 border-dashed border-gray-400 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+          >
+            <div className="text-3xl mb-2">&#128247;</div>
+            <div className="font-bold text-gray-700">Scan with Camera</div>
+            <div className="text-sm text-gray-500 mt-1">Use your camera to scan a QR code</div>
+          </button>
+        </div>
+      )}
+
+      {mode === 'file' && !fileName && !created && (
         <div
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
@@ -111,12 +169,28 @@ export default function QR2Text() {
             accept="image/*"
             style={{ display: 'none' }}
           />
+          <button
+            type="button"
+            className="mt-4 text-sm text-blue-500 hover:text-blue-700"
+            onClick={(e) => { e.stopPropagation(); setMode('choose') }}
+          >
+            &larr; Back
+          </button>
         </div>
       )}
 
-      {fileName && !created && (
+      {mode === 'camera' && !scannedData && !created && (
+        <CameraScanner
+          onScanned={handleCameraScanned}
+          onClose={() => setMode('choose')}
+        />
+      )}
+
+      {hasQrData && !created && (
         <div className="pt-4">
-          <div className="pb-2 text-gray-600">Uploaded File: {fileName}</div>
+          <div className="pb-2 text-gray-600">
+            {fileName ? `Uploaded File: ${fileName}` : 'QR code scanned successfully'}
+          </div>
           <div className="pb-4">
             <div className={styles.labelB}>Password</div>
             <input
