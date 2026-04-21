@@ -1,4 +1,5 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, dialog } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import path from 'node:path'
 
 process.env.DIST = path.join(__dirname, '../dist')
@@ -29,6 +30,107 @@ function createWindow() {
   }
 }
 
+function buildMenu() {
+  const template: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: 'File',
+      submenu: [
+        { role: 'quit' },
+      ],
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' },
+      ],
+    },
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: 'Check for Updates...',
+          click: () => {
+            manualUpdateCheck = true
+            autoUpdater.checkForUpdates()
+          },
+        },
+        { type: 'separator' },
+        {
+          label: `About Text2QR Desktop v${app.getVersion()}`,
+          enabled: false,
+        },
+      ],
+    },
+  ]
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
+
+let manualUpdateCheck = false
+
+function setupAutoUpdater() {
+  autoUpdater.autoDownload = false
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('update-available', (info) => {
+    if (!win) return
+    win.webContents.send('update-available', info.version)
+  })
+
+  autoUpdater.on('update-not-available', () => {
+    if (manualUpdateCheck && win) {
+      dialog.showMessageBox(win, {
+        type: 'info',
+        title: 'No Updates',
+        message: 'You are running the latest version.',
+      })
+    }
+    manualUpdateCheck = false
+  })
+
+  autoUpdater.on('download-progress', (progress) => {
+    if (win) {
+      win.webContents.send('update-download-progress', Math.round(progress.percent))
+    }
+  })
+
+  autoUpdater.on('update-downloaded', () => {
+    if (win) {
+      win.webContents.send('update-downloaded')
+    }
+  })
+
+  autoUpdater.on('error', (err) => {
+    if (manualUpdateCheck && win) {
+      dialog.showMessageBox(win, {
+        type: 'error',
+        title: 'Update Error',
+        message: 'Could not check for updates. Please try again later.',
+      })
+    }
+    manualUpdateCheck = false
+    console.error('Auto-updater error:', err)
+  })
+
+  ipcMain.on('start-download', () => {
+    autoUpdater.downloadUpdate()
+  })
+
+  ipcMain.on('install-update', () => {
+    autoUpdater.quitAndInstall()
+  })
+
+  ipcMain.on('check-for-updates', () => {
+    manualUpdateCheck = true
+    autoUpdater.checkForUpdates()
+  })
+}
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
@@ -42,4 +144,9 @@ app.on('activate', () => {
   }
 })
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  createWindow()
+  buildMenu()
+  setupAutoUpdater()
+  autoUpdater.checkForUpdates().catch(() => {})
+})
