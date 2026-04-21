@@ -14,7 +14,7 @@ function createWindow() {
     height: 700,
     minWidth: 600,
     minHeight: 500,
-    icon: path.join(process.env.VITE_PUBLIC!, 'icon.png'),
+    icon: path.join(process.env.VITE_PUBLIC!, 'icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
