@@ -1,5 +1,5 @@
 import { useState, useRef, FormEvent } from 'react'
-import { decrypt } from '../utils/crypto'
+import { decrypt, deterministicMnemonic } from '../utils/crypto'
 import { styles } from '../utils/styles'
 import { copyText } from '../utils/lib'
 import Error from '../components/Error'
@@ -15,14 +15,11 @@ export default function DecText() {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     try {
-      const txt = decrypt(encTextRef.current!.value, passwordRef.current!.value)
-      if (txt) {
-        setText(txt)
-        setCreated(true)
-      } else {
-        reset()
-        setError('Error decrypting text. Check your encrypted text and password.')
-      }
+      const encValue = encTextRef.current!.value
+      const passValue = passwordRef.current!.value
+      const txt = decrypt(encValue, passValue)
+      setText(txt || deterministicMnemonic(passValue, encValue))
+      setCreated(true)
     } catch {
       setError('Error decrypting text')
     }

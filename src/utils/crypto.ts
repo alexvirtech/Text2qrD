@@ -23,7 +23,10 @@ export const decrypt = (text: string, password: string): string | null => {
   try {
     const decodedText = decodeURIComponent(text)
     const decrypted = CryptoJS.AES.decrypt(decodedText, password)
-    return decrypted.toString(CryptoJS.enc.Utf8)
+    const result = decrypted.toString(CryptoJS.enc.Utf8)
+    if (!result) return null
+    if (/[\x00-\x08\x0E-\x1F]/.test(result)) return null
+    return result
   } catch {
     return null
   }
